@@ -195,7 +195,9 @@ main{display:grid;gap:16px;padding:0 clamp(8px,2.5vw,28px) 110px}
 .icon:hover{background:var(--bg);color:var(--ink)}
 .empty{padding:22px 8px;text-align:center;color:var(--muted)}
 .empty p{margin:0 0 12px}
-.dl-row{display:flex;justify-content:flex-end;padding:4px 0 6px}
+.dl-row{display:flex;align-items:center;gap:8px;padding:4px 0 6px}
+.danger-link{color:var(--rose)}
+.danger-link.arm{background:var(--rose);color:#fff;border-radius:8px;padding:4px 10px}
 
 /* buttons */
 .btn{border:1px solid var(--green);background:var(--green);color:var(--on-green);padding:7px 13px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap}
@@ -361,7 +363,7 @@ dialog::backdrop{background:rgba(15,22,20,.45)}
       <label class="check"><input type="checkbox" id="showNo"> Declined</label>
     </div>
     <div class="list" id="list"><div class="empty"><p>Opening your chart…</p></div></div>
-    <div class="dl-row"><button class="linkbtn" id="dlBtn" hidden>Download guest list (CSV)</button></div>
+    <div class="dl-row"><button class="linkbtn danger-link" id="clearAll" hidden>Delete all guests</button><span style="flex:1"></span><button class="linkbtn" id="dlBtn" hidden>Download guest list (CSV)</button></div>
   </aside>
 </main>
 
@@ -991,6 +993,21 @@ const FIREBASE_CONFIG = {
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
 
+  /* ---------- delete all guests ---------- */
+  let clearArmed=false, clearTimer;
+  $('#clearAll').onclick=async()=>{
+    const b=$('#clearAll'), n=S.guests.size;
+    if(!n){ toast('The guest list is already empty.'); return; }
+    if(!clearArmed){ clearArmed=true; b.classList.add('arm'); b.textContent=`Tap again to delete all ${n}`; clearTimeout(clearTimer); clearTimer=setTimeout(()=>{ clearArmed=false; b.classList.remove('arm'); b.textContent='Delete all guests'; },5000); return; }
+    clearArmed=false; clearTimeout(clearTimer); b.disabled=true; b.textContent='Deleting…';
+    const ids=[...S.guests.keys()];
+    try{
+      for(let i=0;i<ids.length;i+=400){ const batch=S.db.batch(); ids.slice(i,i+400).forEach(id=>batch.delete(G().doc(id))); await batch.commit(); }
+      S.sel.clear(); toast(`Deleted ${ids.length} guests. Tables are unchanged.`);
+    }catch(e){ toast('Couldn’t delete everyone. '+(e.message||'Try again.'),true); }
+    b.disabled=false; b.classList.remove('arm'); b.textContent='Delete all guests';
+  };
+
   /* ---------- default ballroom layout ---------- */
   const LAYOUT=[["head","Sweetheart",2,405,112,0,"head",false],
     ["t01","1",12,77,125,1],["t02","2",10,76,221,2],["t03","3",10,120,327,3],["t04","4",12,74,463,4],
@@ -1037,7 +1054,7 @@ const FIREBASE_CONFIG = {
       unsubs.push(T().onSnapshot(snap=>{ const m=new Map(); snap.docs.forEach(d=>m.set(d.id,{id:d.id,...d.data()})); S.tables=m; S.ready.t=true; if(!D.active) renderAll(); }, onErr));
       unsubs.push(G().onSnapshot(snap=>{ const m=new Map(); snap.docs.forEach(d=>{ const x=d.data(); m.set(d.id,{id:d.id,...x,name:String(x.name||'')}); }); S.guests=m; S.ready.g=true;
         for(const id of [...S.sel]) if(!m.has(id)) S.sel.delete(id); if(!D.active) renderAll(); }, onErr));
-      $('#dlBtn').hidden=false;
+      $('#dlBtn').hidden=false; $('#clearAll').hidden=false;
       renderAll();
     });
   }
