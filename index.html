@@ -247,6 +247,15 @@ dialog::backdrop{background:rgba(15,22,20,.45)}
 .picklist button span{font-size:12.5px;color:var(--muted)}
 .picklist button.none span{color:var(--rose)}
 
+.tip{position:fixed;left:0;top:0;z-index:55;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(20,30,28,.22);padding:10px 12px 8px;width:max-content;max-width:260px;font-size:13.5px}
+.tip[hidden]{display:none}
+.tip h4{margin:0 0 6px;font:400 18px var(--display);display:flex;gap:10px;justify-content:space-between;align-items:baseline}
+.tip h4 small{font:600 12.5px var(--ui);color:var(--muted)}
+.tip ul{list-style:none;margin:0;padding:0;columns:2;column-gap:14px}
+.tip li{padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;break-inside:avoid}
+.tip li small{color:var(--muted)}
+.tip p{margin:0;color:var(--muted)}
+.tip.one ul{columns:1}
 .toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-20px);opacity:0;z-index:70;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;pointer-events:none;transition:.2s;max-width:calc(100% - 24px)}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .toast.bad{background:var(--rose);color:#fff}
@@ -429,6 +438,7 @@ dialog::backdrop{background:rgba(15,22,20,.45)}
   </div>
 </dialog>
 
+<div id="tip" class="tip" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -623,6 +633,7 @@ const FIREBASE_CONFIG = {
     if(S.mode==='plates') renderPlates(); else renderMap();
     renderHint(); renderList(); renderSel();
     if($('#tableDlg').open) fillTableDlg();
+    if(tipId && !D.active) hideTip();
   }
 
   /* ---------- seating actions ---------- */
@@ -677,6 +688,36 @@ const FIREBASE_CONFIG = {
   $('#showNo').onchange=e=>{ S.showNo=e.target.checked; renderList(); };
   $('#sheetToggle').onclick=()=>{ const min=document.body.classList.toggle('sheet-min'); $('#sheetToggle').setAttribute('aria-expanded',!min); $('#sheetToggle').setAttribute('aria-label',min?'Show guest list':'Hide guest list'); $('#sheetToggle').style.transform=min?'rotate(180deg)':''; };
 
+  /* ---------- hover to see who's at a table ---------- */
+  const tip=$('#tip'); let tipId=null;
+  function showTip(tid, x, y, above){
+    const t=S.tables.get(tid); if(!t){ hideTip(); return; }
+    if(tipId!==tid){
+      const people=seatedAt(tid), cap=+t.cap||0;
+      tip.classList.toggle('one', people.length<=6);
+      tip.innerHTML=`<h4>${esc(tName(t))}<small>${people.length}/${cap}${people.length>cap?' over':''}</small></h4>`+
+        (people.length ? `<ul>${people.map(g=>`<li>${esc(g.name)}${g.rsvp==='pending'?' <small>(no reply)</small>':''}</li>`).join('')}</ul>` : '<p>No one seated yet.</p>');
+      tipId=tid;
+    }
+    tip.hidden=false;
+    const w=tip.offsetWidth, h=tip.offsetHeight;
+    let left=x+16, top=above ? y-h-12 : y+16;
+    if(left+w>innerWidth-8) left=x-w-16;
+    if(left<8) left=8;
+    if(top+h>innerHeight-8) top=y-h-12;
+    if(top<8) top=8;
+    tip.style.transform=`translate(${Math.round(left)}px, ${Math.round(top)}px)`;
+  }
+  function hideTip(){ tip.hidden=true; tipId=null; }
+  const tableAt = el => { const g=el&&el.closest('.tbl, .plate-card'); return g ? g.dataset.id : null; };
+  document.addEventListener('pointermove', e=>{
+    if(e.pointerType==='touch' || (S.arrange && e.buttons)) return;
+    const id=tableAt(e.target);
+    if(id) showTip(id, e.clientX, e.clientY); else if(!tip.hidden) hideTip();
+  });
+  document.addEventListener('pointerleave', hideTip);
+  addEventListener('scroll', ()=>{ if(!D.active) hideTip(); }, {passive:true});
+
   /* ---------- drag names onto plates (mouse + long-press touch) ---------- */
   const D={active:false, ids:[], ghost:null, over:null, x:0, y:0, sx:0, sy:0, src:null, raf:0};
   function dragIdsFor(el){
@@ -685,7 +726,7 @@ const FIREBASE_CONFIG = {
   }
   function startDrag(el,x,y){
     if(!S.db) return;
-    D.active=true; D.src=el; D.ids=dragIdsFor(el); D.sx=x; D.sy=y; D.over=null;
+    D.active=true; D.touch=!!touchStart; D.src=el; D.ids=dragIdsFor(el); D.sx=x; D.sy=y; D.over=null;
     const g=document.createElement('div'); g.className='drag-ghost';
     g.textContent = D.ids.length>1 ? (el.dataset.label ? `${el.dataset.label} (${D.ids.length})` : `${D.ids.length} guests`) : (S.guests.get(D.ids[0])?.name||'Guest');
     D.base=g.textContent; document.body.appendChild(g); D.ghost=g; document.body.classList.add('dragging');
@@ -706,6 +747,7 @@ const FIREBASE_CONFIG = {
       else if(t&&t.dataset.drop==='tray') label+='  →  Unseat';
       D.ghost.textContent=label;
     }
+    if(D.touch){ if(t&&t.dataset.drop==='table'){ const r=t.getBoundingClientRect(); showTip(t.dataset.id, r.left+r.width/2-60, r.top, true); } else hideTip(); }
   }
   function autoScroll(){
     if(!D.active) return;
@@ -728,7 +770,7 @@ const FIREBASE_CONFIG = {
     D.over&&D.over.classList.remove('drop-hover');
     D.ghost.remove(); document.body.classList.remove('dragging');
     document.querySelectorAll('.lifted').forEach(n=>n.classList.remove('lifted'));
-    D.active=false; suppressClick=true; setTimeout(()=>suppressClick=false,350);
+    D.active=false; hideTip(); suppressClick=true; setTimeout(()=>suppressClick=false,350);
     if(cancel||!moved||!t) return;
     if(t.dataset.drop==='table') seatIds(ids, t.dataset.id);
     else if(t.dataset.drop==='tray') unseatIds(ids);
@@ -748,12 +790,12 @@ const FIREBASE_CONFIG = {
   document.addEventListener('pointerup', e=>{ if(e.pointerType==='touch') return; pend=null; if(D.active) endDrag(false); });
   document.addEventListener('keydown', e=>{ if(e.key==='Escape' && D.active) endDrag(true); });
   // touch: press and hold, then drag
-  let tp=null;
+  let tp=null, touchStart=false;
   document.addEventListener('touchstart', e=>{
     if(e.touches.length>1){ if(tp){ clearTimeout(tp.timer); tp=null; } return; }
     const el=e.target.closest('[data-drag]'); if(!el || e.target.closest('.icon,.linkbtn')) return;
     const t=e.touches[0];
-    tp={el,x:t.clientX,y:t.clientY,timer:setTimeout(()=>{ if(tp){ startDrag(tp.el,tp.x,tp.y); } },230)};
+    tp={el,x:t.clientX,y:t.clientY,timer:setTimeout(()=>{ if(tp){ touchStart=true; startDrag(tp.el,tp.x,tp.y); touchStart=false; } },230)};
   }, {passive:true});
   document.addEventListener('touchmove', e=>{
     const t=e.touches[0];
