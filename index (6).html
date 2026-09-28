@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seating chart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1EC; --surface:#FFFFFF; --floor:#FBFCFA; --ink:#1E2826; --muted:#5E6B67; --line:#D6DCD4;
+  --green:#2F5D50; --green-soft:#DCE8E1; --on-green:#FFFFFF; --brass:#A07C43; --rose:#B04E63; --rose-soft:#F5DEE3;
+  --paper:#FFFFFF; --paper-rim:#E9E7E1; --wood:#E3C597; --wood-dark:#C9A26B; --wood-ink:#3B2A14; --steel:#8E969A;
+  --display:"Marcellus","Cormorant Garamond",Georgia,serif;
+  --ui:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121817; --surface:#1B2321; --floor:#172020; --ink:#E7ECE9; --muted:#9BA8A3; --line:#314039;
+    --green:#74AD96; --green-soft:#223A31; --on-green:#0E1614; --brass:#CDA96E; --rose:#E48A9C; --rose-soft:#3C222A;
+    --paper:#ECEBE6; --paper-rim:#CFCdC6; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121817; --surface:#1B2321; --floor:#172020; --ink:#E7ECE9; --muted:#9BA8A3; --line:#314039;
+  --green:#74AD96; --green-soft:#223A31; --on-green:#0E1614; --brass:#CDA96E; --rose:#E48A9C; --rose-soft:#3C222A;
+  --paper:#ECEBE6; --paper-rim:#CFCdC6; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--ui);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;justify-content:space-between;padding:18px clamp(12px,3vw,28px) 12px}
+.brand h1{font:400 clamp(28px,4vw,38px)/1.05 var(--display);margin:0;letter-spacing:.01em}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.stats{display:flex;gap:20px;flex-wrap:wrap}
+.stat b{display:block;font:400 25px/1 var(--display)}
+.stat span{font-size:12.5px;color:var(--muted)}
+.stat.bad b{color:var(--rose)}
+.gate{max-width:420px;margin:40px auto;padding:28px 22px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.gate h2{font:400 26px var(--display);margin:0 0 8px}
+.gate p{color:var(--muted);margin:0 0 18px}
+.gate[hidden]{display:none}
+body.locked main{display:none}
+.notice{margin:0 clamp(12px,3vw,28px) 12px;padding:12px 14px;border-radius:10px;background:var(--rose-soft);font-size:14px}
+
+/* layout */
+main{display:grid;gap:16px;padding:0 clamp(8px,2.5vw,28px) 110px}
+.board,.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.board{padding:12px;min-width:0}
+.board-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:0 2px 10px}
+.bar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted);margin:0 2px 8px}
+@media (max-width:999px){
+  .top{padding:12px 12px 8px;gap:8px 20px}
+  .brand h1{font-size:26px} .brand p{font-size:13px}
+  .stats{gap:16px} .stat b{font-size:20px} .stat span{font-size:11.5px}
+  .board{padding:10px}
+  .board-bar{padding-bottom:8px}
+  .board-bar .btn{padding:6px 10px;font-size:13px}
+  .map-top{display:none!important}
+}
+@media (min-width:1000px){
+  main{grid-template-columns:minmax(0,1fr) 370px;align-items:start}
+  .panel{position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
+  .panel .list{overflow:auto;flex:1}
+  .sheet-toggle{display:none!important}
+}
+@media (max-width:999px){
+  body{--sheet-h:40vh}
+  body.sheet-min{--sheet-h:64px}
+  main{padding-bottom:calc(var(--sheet-h) + 24px)}
+  .panel{position:fixed;left:0;right:0;bottom:0;z-index:15;height:calc(var(--sheet-h) + env(safe-area-inset-bottom,0px));border-radius:18px 18px 0 0;border-bottom:0;display:flex;flex-direction:column;padding-bottom:calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 28px rgba(20,30,28,.16);transition:height .2s}
+  .panel .list{overflow:auto;flex:1;overscroll-behavior:contain}
+  body.sheet-min .panel .search, body.sheet-min .panel .filters, body.sheet-min .panel .list, body.sheet-min .panel .dl-row{display:none}
+}
+
+/* segmented control */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:7px 14px;font-size:13.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--green);color:var(--on-green)}
+
+/* ---------- paper plates ---------- */
+.plates{--plate:168px;--r:70px;--pin:108px;--card:360px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card),1fr));justify-items:center;gap:4px 0}
+@media (max-width:420px){ .plates{--plate:146px;--r:60px;--pin:98px;--card:318px} }
+.plate-card{position:relative;width:var(--card);height:var(--card);border-radius:50%}
+.plate-hit{position:absolute;left:50%;top:50%;width:var(--plate);height:var(--plate);margin:calc(var(--plate) / -2) 0 0 calc(var(--plate) / -2);border-radius:50%;cursor:pointer;z-index:1;
+  background:
+    radial-gradient(circle at 50% 50%, var(--paper) 0 58%, transparent 59%),
+    repeating-conic-gradient(from 0deg, var(--paper) 0 3deg, var(--paper-rim) 3deg 6deg);
+  box-shadow:0 2px 0 var(--paper-rim),0 6px 16px rgba(30,40,38,.14);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;color:#1E2826;transition:box-shadow .15s}
+.plate-hit b{font:400 34px/1 var(--display)}
+.plate-hit.head b{font-size:20px}
+.plate-hit span{font:600 13px var(--ui);color:#5E6B67;margin-top:3px}
+.plate-card.full .plate-hit{box-shadow:0 0 0 4px var(--green),0 6px 16px rgba(30,40,38,.14)}
+.plate-card.full .plate-hit span{color:var(--green)}
+.plate-card.over .plate-hit{box-shadow:0 0 0 4px var(--rose),0 6px 16px rgba(30,40,38,.14)}
+.plate-card.over .plate-hit span{color:var(--rose)}
+.plate-card.extra .plate-hit{outline:2px dashed var(--brass);outline-offset:5px}
+.plate-card.target .plate-hit{box-shadow:0 0 0 4px var(--brass),0 6px 16px rgba(30,40,38,.14)}
+.plate-card.drop-hover .plate-hit{box-shadow:0 0 0 7px var(--brass),0 10px 26px rgba(30,40,38,.24);transform:scale(1.04)}
+.pin{position:absolute;left:50%;top:50%;width:var(--pin);height:22px;margin-top:-11px;transform-origin:0 50%;transform:rotate(var(--a)) translateX(var(--r));z-index:2;border-radius:3px 6px 6px 3px;
+  background:linear-gradient(180deg,var(--wood) 0 46%,var(--wood-dark) 46% 54%,var(--wood) 54%);box-shadow:0 1px 2px rgba(0,0,0,.25);
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.pin::before{content:"";position:absolute;left:9px;top:-2px;bottom:-2px;width:7px;border-radius:2px;background:var(--steel);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.pin span{display:block;height:100%;font:600 12px/22px var(--ui);color:var(--wood-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 5px 0 21px}
+.pin span.flip{transform:rotate(180deg);padding:0 21px 0 5px;text-align:left}
+.pin.sel{background:linear-gradient(180deg,#F0D9B0 0 46%,var(--brass) 46% 54%,#F0D9B0 54%);box-shadow:0 0 0 2.5px var(--green),0 1px 2px rgba(0,0,0,.25)}
+.pin.over-pin{background:linear-gradient(180deg,#F1C4CC 0 46%,var(--rose) 46% 54%,#F1C4CC 54%)}
+.pin.empty{width:calc(var(--pin) * .42);background:none;border:1.5px dashed var(--line);box-shadow:none;cursor:default}
+.pin.empty::before{display:none}
+.pin.lifted{opacity:.3}
+
+/* ---------- room map ---------- */
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px;margin-right:5px;border:1.5px solid var(--green)}
+.legend .l-pin{width:6px;height:14px;border-radius:2px;border:0;background:linear-gradient(180deg,var(--wood) 0 44%,var(--wood-dark) 44% 56%,var(--wood) 56%);vertical-align:-3px}
+.legend .l-slot{width:6px;height:14px;border-radius:2px;border:1.2px dashed var(--muted);vertical-align:-3px}
+.legend .l-full{border:3px solid var(--green);background:var(--paper)}
+.legend .l-over{border:3px solid var(--rose);background:var(--paper)} .legend .l-extra{border-style:dashed;border-color:var(--brass);background:var(--paper)}
+.map-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;background:var(--floor)}
+#map{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.map-top{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;margin:0 2px 10px}
+.map-wrap{position:relative}
+.zoom{position:absolute;right:8px;bottom:8px;z-index:3;display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(20,30,28,.12)}
+.zoom button{border:0;background:var(--surface);min-width:38px;height:32px;font-weight:600;color:var(--green)}
+.zoom button+button{border-left:1px solid var(--line)}
+.zoom button:disabled{color:var(--muted);opacity:.5}
+.room{fill:var(--floor);stroke:var(--ink);stroke-width:1.6}
+.wall{stroke:var(--ink);stroke-width:1.2;fill:none}
+.partition{fill:url(#hatch);stroke:var(--muted);stroke-width:1}
+.area{font:400 19px var(--display);fill:var(--ink);text-anchor:middle}
+.fixt{fill:none;stroke:var(--muted);stroke-width:1.2}
+.fixt-t{font:500 12px var(--ui);fill:var(--muted);text-anchor:middle}
+.tbl{cursor:pointer;outline:none}
+.tshape{fill:var(--paper);stroke:var(--paper-rim);stroke-width:5}
+.tinner{fill:none;stroke:var(--paper-rim);stroke-width:1;pointer-events:none}
+.mpin{fill:var(--wood);stroke:var(--wood-dark);stroke-width:.8;pointer-events:none}
+.mpin-band{fill:var(--steel);pointer-events:none}
+.mslot{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:2.5 2;opacity:.6;pointer-events:none}
+.mpin.over{fill:#F1C4CC;stroke:var(--rose)}
+.tnum{font:400 24px var(--display);fill:#1E2826;text-anchor:middle;pointer-events:none}
+.tbl.head .tnum{font:600 10.5px var(--ui)}
+.tcount{font:600 13px var(--ui);fill:#5E6B67;text-anchor:middle;pointer-events:none}
+.tbl.full .tshape{stroke:var(--green)}
+.tbl.full .tcount{fill:#2F5D50}
+.tbl.over .tshape{stroke:var(--rose)}
+.tbl.over .tcount{fill:#B04E63}
+.tbl.extra .tshape{stroke:var(--brass);stroke-width:2.5;stroke-dasharray:6 4}
+.tbl:hover .tshape,.tbl:focus-visible .tshape{stroke:var(--brass)}
+.tbl.target .tshape{stroke:var(--brass);stroke-width:5;stroke-dasharray:none}
+.tbl.drop-hover .tshape{stroke:var(--brass);stroke-width:9;stroke-dasharray:none}
+.arranging .tbl{cursor:grab;touch-action:none}
+.arranging .tshape{stroke-dasharray:5 4}
+
+/* ---------- guest tray ---------- */
+.panel{padding:12px 12px 4px}
+.panel.drop-hover{box-shadow:0 0 0 3px var(--brass)}
+.panel-head{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-head h2{font:400 22px var(--display);margin:0;white-space:nowrap}
+.panel-head h2 small{font:500 13px var(--ui);color:var(--muted);margin-left:6px}
+.panel-actions{display:flex;gap:6px;align-items:center}
+.search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px}
+.filters{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0 4px}
+.filters .seg button{padding:5px 11px;font-size:13px}
+.check{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.list{margin:0 -6px;padding:0 6px 8px}
+.group{margin-top:8px}
+.group-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);border-radius:8px;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.group-h strong{color:var(--ink);font-weight:600}
+.linkbtn{border:0;background:none;color:var(--green);font-weight:600;font-size:13px;padding:4px 2px}
+.row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:10px;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.row.on{background:var(--green-soft)}
+.row.lifted,.group-h.lifted{opacity:.35}
+.row.no .r-name{text-decoration:line-through;color:var(--muted)}
+.grip{flex:none;width:8px;height:22px;border-radius:2px;background:linear-gradient(180deg,var(--wood) 0 44%,var(--wood-dark) 44% 56%,var(--wood) 56%)}
+.row.on .grip{box-shadow:0 0 0 2px var(--green)}
+.r-main{flex:1;min-width:0;border:0;background:none;text-align:left;padding:2px 0;cursor:inherit}
+.r-name{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-note{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{flex:none;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.yes{border-color:var(--green);color:var(--green)}
+.pill.no{border-color:var(--rose);color:var(--rose)}
+.tbadge{flex:none;min-width:32px;text-align:center;font:400 15px var(--display);padding:2px 6px;border-radius:8px;background:var(--bg);color:var(--muted)}
+.tbadge.set{background:var(--green);color:var(--on-green)}
+.icon{flex:none;width:32px;height:32px;border:0;border-radius:8px;background:none;color:var(--muted);display:grid;place-items:center}
+.icon:hover{background:var(--bg);color:var(--ink)}
+.empty{padding:22px 8px;text-align:center;color:var(--muted)}
+.empty p{margin:0 0 12px}
+.dl-row{display:flex;justify-content:flex-end;padding:4px 0 6px}
+
+/* buttons */
+.btn{border:1px solid var(--green);background:var(--green);color:var(--on-green);padding:7px 13px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap}
+.btn.ghost{background:none;color:var(--green)}
+.btn.ghost[aria-pressed="true"]{background:var(--green);color:var(--on-green)}
+.btn.danger{background:none;border-color:var(--rose);color:var(--rose)}
+.btn.danger.arm{background:var(--rose);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* selection bar */
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:20;width:min(620px,calc(100% - 20px));background:var(--ink);color:var(--bg);border-radius:14px;padding:9px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 10px 30px rgba(20,30,28,.28)}
+@media (max-width:999px){ .selbar{bottom:calc(var(--sheet-h) + 10px + env(safe-area-inset-bottom,0px))} }
+.selbar[hidden]{display:none}
+.selbar p{margin:0;flex:1;min-width:150px;font-size:14px}
+.selbar .btn{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.selbar .btn.ghost{background:none;color:var(--bg);border-color:rgba(127,127,127,.5)}
+
+/* drag ghost */
+.drag-ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;height:26px;padding:0 12px 0 26px;border-radius:4px 8px 8px 4px;font:600 13px/26px var(--ui);color:var(--wood-ink);white-space:nowrap;
+  background:linear-gradient(180deg,var(--wood) 0 46%,var(--wood-dark) 46% 54%,var(--wood) 54%);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.drag-ghost::before{content:"";position:absolute;left:12px;top:-2px;bottom:-2px;width:7px;border-radius:2px;background:var(--steel)}
+body.dragging,body.dragging *{cursor:grabbing!important}
+
+/* dialogs */
+dialog{border:1px solid var(--line);border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:min(520px,calc(100% - 20px));max-height:calc(100% - 30px)}
+dialog::backdrop{background:rgba(15,22,20,.45)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:12px}
+.dlg h3{font:400 24px var(--display);margin:0}
+.field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:16px;color:var(--ink)}
+.field textarea{min-height:150px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dlg-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding-top:4px}
+.dlg-foot .spacer{flex:1}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;align-self:flex-start}
+.stepper button{border:0;background:var(--bg);width:40px;height:40px;font-size:20px}
+.stepper output{min-width:52px;text-align:center;font:400 20px var(--display);color:var(--ink)}
+.seated{list-style:none;margin:0;padding:0;border-top:1px solid var(--line);max-height:40vh;overflow:auto}
+.seated li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.seated small{color:var(--muted)}
+.muted{color:var(--muted);font-size:13.5px;margin:0}
+.preview{font-size:13px;overflow:auto;max-height:180px;border:1px solid var(--line);border-radius:10px}
+.preview table{border-collapse:collapse;width:100%}
+.preview th,.preview td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.preview th{color:var(--muted);font-weight:600}
+.picklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:55vh;overflow:auto}
+.picklist button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;text-align:left}
+.picklist button b{display:block;font:400 18px var(--display)}
+.picklist button span{font-size:12.5px;color:var(--muted)}
+.picklist button.none span{color:var(--rose)}
+
+.toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-20px);opacity:0;z-index:70;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:14px;pointer-events:none;transition:.2s;max-width:calc(100% - 24px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:var(--rose);color:#fff}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Seating chart</h1>
+    <p>Engagement party</p>
+  </div>
+  <div class="stats" id="stats"></div>
+  <button class="linkbtn" id="signOut" hidden>Sign out</button>
+</header>
+<div class="gate" id="gate" hidden>
+  <h2>Sign in to open the seating chart</h2>
+  <p id="gateMsg">Use the Google account that has access.</p>
+  <button class="btn" id="signIn">Sign in with Google</button>
+</div>
+<div id="notice" class="notice" hidden></div>
+
+<main>
+  <section class="board" aria-label="Tables">
+    <div class="board-bar">
+      <div class="seg" role="group" aria-label="View">
+        <button data-mode="map" aria-pressed="true">Room</button>
+        <button data-mode="plates" aria-pressed="false">Plates</button>
+      </div>
+      <div class="bar-actions">
+        <button class="btn ghost" id="addTable">Add table</button>
+        <button class="btn ghost" id="arrange" aria-pressed="false" hidden>Move tables</button>
+      </div>
+    </div>
+    <p class="hint" id="boardHint"></p>
+
+    <div id="platesView" class="plates" hidden></div>
+
+    <div id="mapView">
+      <div class="map-top">
+        <div class="legend">
+          <span><i class="l-pin"></i>Seated</span><span><i class="l-slot"></i>Open seat</span><span><i class="l-full"></i>Full</span><span><i class="l-over"></i>Over</span><span><i class="l-extra"></i>Added table</span>
+        </div>
+      </div>
+      <div class="map-wrap">
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button id="zOut" aria-label="Zoom out">−</button><button id="zFit">Fit</button><button id="zIn" aria-label="Zoom in">+</button>
+      </div>
+      <div class="map-scroll">
+        <svg id="map" viewBox="0 20 1115 545" role="group" aria-label="Room map">
+          <defs>
+            <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--muted)" stroke-width="1"/>
+            </pattern>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/>
+            </marker>
+          </defs>
+          <path class="room" d="M70,57 H1005 A45,45 0 0 1 1050,102 V503 A45,45 0 0 1 1005,548 H165 V528 H70 A45,45 0 0 1 25,483 V102 A45,45 0 0 1 70,57 Z"/>
+          <line class="wall" x1="162" y1="44" x2="162" y2="70"/>
+          <line class="wall" x1="696" y1="44" x2="696" y2="70"/>
+          <line class="wall" x1="690" y1="160" x2="690" y2="548"/>
+          <line class="wall" x1="735" y1="492" x2="1048" y2="492"/>
+          <rect class="partition" x="150" y="177" width="20" height="70"/>
+          <rect class="partition" x="150" y="392" width="20" height="129"/>
+          <rect class="partition" x="691" y="177" width="20" height="70"/>
+          <rect class="partition" x="691" y="417" width="20" height="103"/>
+          <text class="area" x="93" y="48">North Porch</text>
+          <text class="area" x="434" y="48">Ballroom Windows</text>
+          <text class="area" x="897" y="48">Dining Room</text>
+          <rect class="fixt" x="1053" y="85" width="22" height="89"/>
+          <text class="fixt-t" x="1064" y="192">Bar</text>
+          <rect class="fixt" x="374" y="488" width="64" height="33"/>
+          <text class="fixt-t" x="406" y="509">DJ</text>
+          <line class="fixt" x1="1017" y1="360" x2="1105" y2="360" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+          <line class="fixt" x1="640" y1="521" x2="716" y2="521" marker-end="url(#arrow)"/>
+          <text class="fixt-t" x="770" y="525">To living room</text>
+          <g id="tablesLayer"></g>
+        </svg>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel" id="tray" data-drop="tray" aria-label="Guest list">
+    <div class="panel-head">
+      <h2>Guests<small id="toSeat"></small></h2>
+      <div class="panel-actions">
+        <button class="btn ghost" id="importBtn">Import</button>
+        <button class="btn" id="addGuestBtn">Add</button>
+        <button class="icon sheet-toggle" id="sheetToggle" aria-label="Hide guest list" aria-expanded="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+    <input class="search" id="search" type="search" placeholder="Search names, parties or notes" autocomplete="off">
+    <div class="filters">
+      <div class="seg" role="group" aria-label="Show">
+        <button data-view="unseated" aria-pressed="true">Unseated</button>
+        <button data-view="seated" aria-pressed="false">Seated</button>
+        <button data-view="all" aria-pressed="false">All</button>
+      </div>
+      <label class="check"><input type="checkbox" id="showNo"> Declined</label>
+    </div>
+    <div class="list" id="list"><div class="empty"><p>Opening your chart…</p></div></div>
+    <div class="dl-row"><button class="linkbtn" id="dlBtn" hidden>Download guest list (CSV)</button></div>
+  </aside>
+</main>
+
+<div class="selbar" id="selbar" hidden>
+  <p id="selText"></p>
+  <button class="btn" id="pickTableBtn">Choose table</button>
+  <button class="btn ghost" id="unseatSelBtn">Unseat</button>
+  <button class="btn ghost" id="clearSelBtn">Clear</button>
+</div>
+
+<dialog id="guestDlg">
+  <form class="dlg" method="dialog" id="guestForm">
+    <h3 id="guestTitle">Add guest</h3>
+    <label class="field">Name<input id="gName" required autocomplete="off"></label>
+    <label class="field">Party or household<input id="gParty" list="partyList" autocomplete="off" placeholder="e.g. Hanna family"></label>
+    <datalist id="partyList"></datalist>
+    <div class="two">
+      <label class="field">RSVP<select id="gRsvp"><option value="yes">Coming</option><option value="pending">No reply yet</option><option value="no">Declined</option></select></label>
+      <label class="field">Table<select id="gTable"></select></label>
+    </div>
+    <label class="field">Note<input id="gNote" autocomplete="off" placeholder="e.g. keep near grandparents"></label>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="gDelete">Delete guest</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn">Save guest</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="tableDlg">
+  <div class="dlg">
+    <h3 id="tTitle">Table</h3>
+    <div class="two">
+      <label class="field">Name or number<input id="tLabel" autocomplete="off"></label>
+      <div class="field">Seats
+        <div class="stepper"><button type="button" id="tMinus" aria-label="Fewer seats">−</button><output id="tCap">10</output><button type="button" id="tPlus" aria-label="More seats">+</button></div>
+      </div>
+    </div>
+    <p class="muted" id="tSummary"></p>
+    <ul class="seated" id="tList"></ul>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="tDelete">Delete table</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="tDone">Done</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="pickDlg">
+  <div class="dlg">
+    <h3 id="pickTitle">Seat guests</h3>
+    <div class="picklist" id="pickList"></div>
+    <div class="dlg-foot"><button type="button" class="btn ghost" data-close>Cancel</button></div>
+  </div>
+</dialog>
+
+<dialog id="importDlg">
+  <div class="dlg">
+    <h3>Import guests</h3>
+    <p class="muted">Upload a CSV or spreadsheet export, or paste one guest per line. Columns for name (or first and last), party or household, RSVP and table are picked up automatically. Without headers, lines read as <em>Name, Party, RSVP</em>.</p>
+    <label class="field">Upload a file<input type="file" id="iFile" accept=".csv,.tsv,.txt,text/csv,text/plain"></label>
+    <label class="field">Or paste names<textarea id="iText" placeholder="Mina Hanna, Hanna family&#10;Mariam Hanna, Hanna family&#10;George Botros"></textarea></label>
+    <div class="two">
+      <label class="field">RSVP when not given<select id="iRsvp"><option value="pending">No reply yet</option><option value="yes">Coming</option></select></label>
+      <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="iSkip" checked> Skip names already on the list</label>
+    </div>
+    <p class="muted" id="iSummary">Nothing to import yet.</p>
+    <div class="preview" id="iPreview" hidden></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="button" class="btn" id="iGo" disabled>Import</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ===== Paste your Firebase web app config here (Firebase console → Project settings → Your apps) ===== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAKEGEtOWVXo1jPKApPuTyT3LAIWpKmNoE",
+  authDomain: "seating-chart-moyo.firebaseapp.com",
+  projectId: "seating-chart-moyo",
+  storageBucket: "seating-chart-moyo.firebasestorage.app",
+  messagingSenderId: "167930890436",
+  appId: "1:167930890436:web:aa8f5f9786e994b03e2191"
+};
+/* ================================================================================================= */
+(() => {
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const touchy = matchMedia('(pointer:coarse)').matches;
+  const S = { db:null, dl:null, tables:new Map(), guests:new Map(), sel:new Set(), q:'', view:'unseated', showNo:false, arrange:false, mode:'map', ready:{t:false,g:false} };
+
+  /* ---------- toast & notice ---------- */
+  let toastTimer;
+  function toast(msg, bad){ const t=$('#toast'); t.textContent=msg; t.className='toast show'+(bad?' bad':''); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className='toast',3400); }
+  function notice(msg){ const n=$('#notice'); n.textContent=msg; n.hidden=!msg; }
+
+  /* ---------- throttled write queue ---------- */
+  const queue=[]; let active=0;
+  function enqueue(fn){ return new Promise((res,rej)=>{ queue.push({fn,res,rej,tries:0}); pump(); }); }
+  function pump(){
+    while(active<5 && queue.length){
+      const job=queue.shift(); active++;
+      Promise.resolve().then(job.fn).then(v=>{ active--; job.res(v); pump(); }, err=>{
+        active--;
+        const code=err&&err.code;
+        if((code==='resource_exhausted'||code==='resource-exhausted'||code==='unavailable'||code==='aborted') && job.tries<5){ job.tries++; setTimeout(()=>{ queue.unshift(job); pump(); }, 500*2**job.tries); }
+        else job.rej(err);
+        pump();
+      });
+    }
+  }
+  function write(fn){ return enqueue(fn).catch(e=>{ toast('Couldn’t save that change. '+(e&&e.message?e.message:'Check your connection and try again.'), true); throw e; }); }
+  const G = () => S.db.collection('guests');
+  const T = () => S.db.collection('tables');
+  function updGuest(id, patch){ const g=S.guests.get(id); if(g) S.guests.set(id,{...g,...patch}); return write(()=>G().doc(id).update(patch)).catch(()=>{}); }
+  function updTable(id, patch){ const t=S.tables.get(id); if(t) S.tables.set(id,{...t,...patch}); return write(()=>T().doc(id).update(patch)).catch(()=>{}); }
+
+  /* ---------- derived ---------- */
+  const tName = t => !t ? 'Unseated' : (/^\d+$/.test(String(t.label)) ? 'Table '+t.label : t.label);
+  const sortedTables = () => [...S.tables.values()].sort((a,b)=>(a.order??999)-(b.order??999) || String(a.label).localeCompare(String(b.label),undefined,{numeric:true}));
+  function counts(){ const m=new Map(); for(const g of S.guests.values()){ if(g.table && S.tables.has(g.table)) m.set(g.table,(m.get(g.table)||0)+1); } return m; }
+  const seatedAt = tid => [...S.guests.values()].filter(g=>g.table===tid).sort((a,b)=>(a.party||'').localeCompare(b.party||'')||a.name.localeCompare(b.name));
+  const isSeated = g => !!(g.table && S.tables.has(g.table));
+  const rsvpLabel = r => r==='yes'?'Coming':r==='no'?'Declined':'No reply';
+  const pinName = n => { const p=String(n).trim().split(/\s+/); return p.length>1 ? p[0]+' '+p[p.length-1][0]+'.' : p[0]; };
+  const tState = (n,cap) => n===0?'empty': n>cap?'over': n===cap?'full':'part';
+
+  /* ---------- stats ---------- */
+  function renderStats(){
+    const all=[...S.guests.values()];
+    const invited=all.filter(g=>g.rsvp!=='no');
+    const coming=all.filter(g=>g.rsvp==='yes').length;
+    const seated=invited.filter(isSeated).length;
+    const cap=[...S.tables.values()].reduce((s,t)=>s+(+t.cap||0),0);
+    const spare=cap-invited.length;
+    $('#stats').innerHTML=`
+      <div class="stat"><b>${invited.length}</b><span>Guests</span></div>
+      <div class="stat"><b>${coming}</b><span>Coming</span></div>
+      <div class="stat"><b>${seated}</b><span>Seated</span></div>
+      <div class="stat ${spare<0?'bad':''}"><b>${spare<0?spare:'+'+spare}</b><span>${spare<0?'Seats short':'Spare seats'}</span></div>`;
+    $('#toSeat').textContent = S.ready.g ? `${invited.length-seated} to seat` : '';
+  }
+
+  /* ---------- plates ---------- */
+  function renderPlates(){
+    const selMode=S.sel.size>0;
+    $('#platesView').innerHTML = sortedTables().map(t=>{
+      const people=seatedAt(t.id), cap=+t.cap||0, n=people.length, slots=Math.max(cap,n,1);
+      const head=t.shape==='head';
+      let pins='';
+      for(let i=0;i<slots;i++){
+        const a=-90+i*360/slots, g=people[i];
+        const flip=Math.cos(a*Math.PI/180)<-0.01;
+        pins += g
+          ? `<div class="pin${S.sel.has(g.id)?' sel':''}${i>=cap?' over-pin':''}" data-drag data-gid="${esc(g.id)}" style="--a:${a}deg" title="${esc(g.name)}"><span${flip?' class="flip"':''}>${esc(pinName(g.name))}</span></div>`
+          : `<div class="pin empty" style="--a:${a}deg" aria-hidden="true"></div>`;
+      }
+      return `<div class="plate-card ${tState(n,cap)}${t.extra?' extra':''}${selMode?' target':''}" data-drop="table" data-id="${esc(t.id)}">
+        <div class="plate-hit${head?' head':''}" data-plate="${esc(t.id)}" role="button" tabindex="0" aria-label="${esc(tName(t))}, ${n} of ${cap} seats"><b>${esc(t.label)}</b><span>${n}/${cap}</span></div>${pins}</div>`;
+    }).join('');
+  }
+
+  /* ---------- map ---------- */
+  function renderMap(){
+    const c=counts(), selMode=S.sel.size>0 && !S.arrange;
+    $('#map').classList.toggle('arranging', S.arrange);
+    $('#tablesLayer').innerHTML = sortedTables().map(t=>{
+      const n=c.get(t.id)||0, cap=+t.cap||0, head=t.shape==='head';
+      let pins='';
+      if(!head){
+        const slots=Math.max(cap,n,1);
+        for(let i=0;i<slots;i++){
+          const a=-90+i*360/slots;
+          pins += i<n
+            ? `<g transform="rotate(${a})"><rect class="mpin${i>=cap?' over':''}" x="33" y="-3.5" width="19" height="7" rx="1.5"/><rect class="mpin-band" x="35" y="-4.5" width="3" height="9" rx="1"/></g>`
+            : `<rect class="mslot" x="35" y="-3" width="13" height="6" rx="1.5" transform="rotate(${a})"/>`;
+        }
+      } else {
+        for(let i=0;i<Math.max(cap,n);i++){ const x=-14+i*28; pins += i<n ? `<g transform="translate(${x} -24) rotate(-90)"><rect class="mpin" x="0" y="-3.5" width="17" height="7" rx="1.5"/><rect class="mpin-band" x="2" y="-4.5" width="3" height="9" rx="1"/></g>` : `<rect class="mslot" x="${x-3}" y="-38" width="6" height="12" rx="1.5"/>`; }
+      }
+      const shape = head ? `<path class="tshape" d="M-37,-24 H37 V0 A37,26 0 0 1 -37,0 Z"/>` : `<circle class="tshape" r="38"/><circle class="tinner" r="29"/>`;
+      return `<g class="tbl ${tState(n,cap)}${head?' head':''}${t.extra?' extra':''}${selMode?' target':''}" data-id="${esc(t.id)}" data-drop="table" transform="translate(${+t.x||0} ${+t.y||0})" tabindex="0" role="button" aria-label="${esc(tName(t))}, ${n} of ${cap} seats">
+        <circle r="54" fill="transparent"/>${shape}${pins}<text class="tnum" y="${head?-6:4}">${esc(t.label)}</text><text class="tcount" y="${head?12:21}">${n}/${cap}</text></g>`;
+    }).join('');
+  }
+
+  function renderHint(){
+    const h=$('#boardHint');
+    if(S.db && S.ready.t && S.tables.size===0){ h.innerHTML='No tables yet. <button class="btn" id="setupRoom" style="margin-left:8px">Set up the ballroom layout</button>'; $('#setupRoom').onclick=setupRoom; return; }
+    if(S.mode==='map' && S.arrange) h.textContent='Drag tables to move them. Tap one to rename it, change seats or delete it.';
+    else if(S.sel.size) h.textContent=`Tap a table to seat the ${S.sel.size} selected.`;
+    else if(S.mode==='map') h.textContent = touchy ? 'Hold a name, then drag it onto a table. Tap a table to see who’s there.' : 'Drag names onto tables. Tap a table to see who’s there, or switch to Plates to read every name and move pins between tables.';
+    else h.textContent = touchy
+      ? 'Press and hold a name, then drag it onto a plate. Drag a pin off a plate and onto the list to unseat.'
+      : 'Drag names onto plates. Drag a pin to another plate to move it, or back to the list to unseat.';
+  }
+
+  /* ---------- zoom ---------- */
+  const ZOOMS=[1,1.5,2,3]; let zi=0;
+  function applyZoom(){ $('#map').style.width=(ZOOMS[zi]*100)+'%'; $('#zOut').disabled=zi===0; $('#zFit').disabled=zi===0; $('#zIn').disabled=zi===ZOOMS.length-1; }
+  function setZoom(n){
+    const sc=$('.map-scroll'); const cx=(sc.scrollLeft+sc.clientWidth/2)/sc.scrollWidth;
+    zi=Math.max(0,Math.min(ZOOMS.length-1,n)); applyZoom();
+    sc.scrollLeft=cx*sc.scrollWidth-sc.clientWidth/2;
+  }
+  $('#zIn').onclick=()=>setZoom(zi+1); $('#zOut').onclick=()=>setZoom(zi-1); $('#zFit').onclick=()=>setZoom(0);
+  applyZoom();
+
+  /* ---------- list ---------- */
+  function filteredGuests(){
+    const q=S.q.trim().toLowerCase();
+    return [...S.guests.values()].filter(g=>{
+      if(!S.showNo && g.rsvp==='no') return false;
+      if(S.view==='seated' && !isSeated(g)) return false;
+      if(S.view==='unseated' && isSeated(g)) return false;
+      if(q){ const t=S.tables.get(g.table); const hay=[g.name,g.party,g.note,t?tName(t):''].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+      return true;
+    });
+  }
+  const pencil='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  function renderList(){
+    const list=$('#list');
+    if(!S.db) return;
+    if(!S.ready.g){ list.innerHTML='<div class="empty"><p>Opening your chart…</p></div>'; return; }
+    if(S.guests.size===0){ list.innerHTML='<div class="empty"><p>No guests yet. Import your list or add guests one at a time.</p><button class="btn" data-act="import">Import guests</button></div>'; return; }
+    const rows=filteredGuests();
+    if(!rows.length){
+      list.innerHTML = `<div class="empty"><p>${S.view==='unseated'&&!S.q ? 'Everyone on the list has a seat.' : 'No guests match. Clear the search or switch to All.'}</p></div>`; return;
+    }
+    const groups=new Map();
+    for(const g of rows){ const k=(g.party||'').trim(); const key=k?'p:'+k.toLowerCase():'s:'+g.id; if(!groups.has(key)) groups.set(key,{party:k,items:[]}); groups.get(key).items.push(g); }
+    const sorted=[...groups.values()].sort((a,b)=>(a.party||a.items[0].name).localeCompare(b.party||b.items[0].name));
+    list.innerHTML=sorted.map(gr=>{
+      gr.items.sort((a,b)=>a.name.localeCompare(b.name));
+      const ids=gr.items.map(g=>esc(g.id)).join(',');
+      const allOn=gr.items.every(g=>S.sel.has(g.id));
+      const head = gr.party && gr.items.length>1 ? `<div class="group-h" data-drag data-party="1" data-ids="${ids}" data-label="${esc(gr.party)}"><span><strong>${esc(gr.party)}</strong> ${gr.items.length}</span><button class="linkbtn" data-act="party" data-ids="${ids}">${allOn?'Deselect':'Select all'}</button></div>` : '';
+      return `<div class="group">${head}${gr.items.map(g=>{
+        const t=S.tables.get(g.table);
+        const badge = t ? (t.shape==='head' ? '♥' : esc(t.label)) : '–';
+        const sub = [gr.items.length===1&&g.party?g.party:'', g.note].filter(Boolean).join(', ');
+        return `<div class="row ${S.sel.has(g.id)?'on':''} ${g.rsvp==='no'?'no':''}" data-drag data-gid="${esc(g.id)}">
+          <span class="grip" aria-hidden="true"></span>
+          <button class="r-main" data-act="pick" aria-pressed="${S.sel.has(g.id)}"><span class="r-name">${esc(g.name)}</span>${sub?`<span class="r-note">${esc(sub)}</span>`:''}</button>
+          <span class="pill ${g.rsvp==='yes'?'yes':g.rsvp==='no'?'no':''}">${rsvpLabel(g.rsvp)}</span>
+          <span class="tbadge ${t?'set':''}" title="${esc(tName(t))}">${badge}</span>
+          <button class="icon" data-act="edit" aria-label="Edit ${esc(g.name)}">${pencil}</button>
+        </div>`;}).join('')}</div>`;
+    }).join('');
+  }
+
+  function renderSel(){
+    const n=S.sel.size;
+    $('#selbar').hidden = n===0 || S.arrange;
+    $('#selText').textContent = `${n} selected. Tap a plate, or choose a table.`;
+  }
+  function renderAll(){
+    renderStats();
+    $('#platesView').hidden = S.mode!=='plates'; $('#mapView').hidden = S.mode!=='map';
+    $('#arrange').hidden = S.mode!=='map';
+    if(S.mode==='plates') renderPlates(); else renderMap();
+    renderHint(); renderList(); renderSel();
+    if($('#tableDlg').open) fillTableDlg();
+  }
+
+  /* ---------- seating actions ---------- */
+  function seatIds(ids, tid){
+    const t=S.tables.get(tid); if(!t||!ids.length) return;
+    const moving=ids.filter(id=>S.guests.get(id)?.table!==tid);
+    moving.forEach(id=>updGuest(id,{table:tid}));
+    S.sel.clear(); renderAll();
+    if(!moving.length) return;
+    const n=counts().get(tid)||0, cap=+t.cap||0;
+    const who = moving.length===1 ? S.guests.get(moving[0]).name : `${moving.length} guests`;
+    toast(`${who} → ${tName(t)}.`+(n>cap?` Over by ${n-cap}.`:''), n>cap);
+  }
+  function unseatIds(ids){
+    const moving=ids.filter(id=>isSeated(S.guests.get(id)||{}));
+    moving.forEach(id=>updGuest(id,{table:null}));
+    S.sel.clear(); renderAll();
+    if(moving.length) toast(moving.length===1 ? `Unseated ${S.guests.get(moving[0]).name}.` : `Unseated ${moving.length} guests.`);
+  }
+  $('#unseatSelBtn').onclick=()=>unseatIds([...S.sel]);
+  $('#clearSelBtn').onclick=()=>{ S.sel.clear(); renderAll(); };
+  $('#pickTableBtn').onclick=()=>{
+    const c=counts(); $('#pickTitle').textContent=`Seat ${S.sel.size} guest${S.sel.size>1?'s':''}`;
+    $('#pickList').innerHTML=sortedTables().map(t=>{ const open=(+t.cap||0)-(c.get(t.id)||0);
+      return `<button data-id="${esc(t.id)}" class="${open<S.sel.size?'none':''}"><b>${esc(tName(t))}</b><span>${open<=0?'Full':open+' open seat'+(open>1?'s':'')}</span></button>`; }).join('');
+    $('#pickDlg').showModal();
+  };
+  $('#pickList').onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; $('#pickDlg').close(); seatIds([...S.sel], b.dataset.id); };
+  function toggleSel(id){ S.sel.has(id)?S.sel.delete(id):S.sel.add(id); renderAll(); }
+  function tableTap(id){ if(!S.db) return; if(S.sel.size && !S.arrange) seatIds([...S.sel], id); else openTable(id); }
+
+  /* ---------- clicks ---------- */
+  let suppressClick=false;
+  document.addEventListener('click', e=>{ if(suppressClick){ suppressClick=false; e.stopPropagation(); e.preventDefault(); } }, true);
+  $('#list').addEventListener('click', e=>{
+    const el=e.target.closest('[data-act]'); if(!el) return;
+    const act=el.dataset.act;
+    if(act==='import') return openImport();
+    if(act==='party'){ const ids=el.dataset.ids.split(','); const allOn=ids.every(i=>S.sel.has(i)); ids.forEach(i=>allOn?S.sel.delete(i):S.sel.add(i)); return renderAll(); }
+    const id=el.closest('.row')?.dataset.gid; if(!id) return;
+    if(act==='pick') toggleSel(id);
+    if(act==='edit') openGuest(id);
+  });
+  $('#platesView').addEventListener('click', e=>{
+    const pin=e.target.closest('.pin[data-gid]'); if(pin) return toggleSel(pin.dataset.gid);
+    const plate=e.target.closest('[data-plate]'); if(plate) tableTap(plate.dataset.plate);
+  });
+  $('#platesView').addEventListener('keydown', e=>{ const p=e.target.closest('[data-plate]'); if(p&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tableTap(p.dataset.plate); } });
+  $('#search').addEventListener('input', e=>{ S.q=e.target.value; renderList(); });
+  document.querySelectorAll('.filters .seg button').forEach(b=>b.onclick=()=>{ S.view=b.dataset.view; document.querySelectorAll('.filters .seg button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderList(); });
+  document.querySelectorAll('.board-bar .seg button').forEach(b=>b.onclick=()=>{ S.mode=b.dataset.mode; if(S.mode!=='map' && S.arrange){ S.arrange=false; $('#arrange').setAttribute('aria-pressed',false); $('#arrange').textContent='Move tables'; } document.querySelectorAll('.board-bar .seg button').forEach(x=>x.setAttribute('aria-pressed', x===b)); renderAll(); });
+  $('#showNo').onchange=e=>{ S.showNo=e.target.checked; renderList(); };
+  $('#sheetToggle').onclick=()=>{ const min=document.body.classList.toggle('sheet-min'); $('#sheetToggle').setAttribute('aria-expanded',!min); $('#sheetToggle').setAttribute('aria-label',min?'Show guest list':'Hide guest list'); $('#sheetToggle').style.transform=min?'rotate(180deg)':''; };
+
+  /* ---------- drag names onto plates (mouse + long-press touch) ---------- */
+  const D={active:false, ids:[], ghost:null, over:null, x:0, y:0, sx:0, sy:0, src:null, raf:0};
+  function dragIdsFor(el){
+    if(el.dataset.party) return el.dataset.ids.split(',');
+    const id=el.dataset.gid; return (S.sel.has(id) && S.sel.size>1) ? [...S.sel] : [id];
+  }
+  function startDrag(el,x,y){
+    if(!S.db) return;
+    D.active=true; D.src=el; D.ids=dragIdsFor(el); D.sx=x; D.sy=y; D.over=null;
+    const g=document.createElement('div'); g.className='drag-ghost';
+    g.textContent = D.ids.length>1 ? (el.dataset.label ? `${el.dataset.label} (${D.ids.length})` : `${D.ids.length} guests`) : (S.guests.get(D.ids[0])?.name||'Guest');
+    D.base=g.textContent; document.body.appendChild(g); D.ghost=g; document.body.classList.add('dragging');
+    D.ids.forEach(id=>document.querySelectorAll(`[data-gid="${CSS.escape(id)}"]`).forEach(n=>n.classList.add('lifted')));
+    if(el.dataset.party) el.classList.add('lifted');
+    if(navigator.vibrate) try{ navigator.vibrate(8); }catch(_){}
+    moveDrag(x,y); D.raf=requestAnimationFrame(autoScroll);
+  }
+  function hit(x,y){ const el=document.elementFromPoint(x,y); return el ? el.closest('[data-drop]') : null; }
+  function moveDrag(x,y){
+    D.x=x; D.y=y;
+    D.ghost.style.transform=`translate(${x}px, ${y-46}px) translateX(-50%)`;
+    const t=hit(x,y);
+    if(t!==D.over){
+      D.over&&D.over.classList.remove('drop-hover'); t&&t.classList.add('drop-hover'); D.over=t;
+      let label=D.base;
+      if(t&&t.dataset.drop==='table'){ const tb=S.tables.get(t.dataset.id); if(tb){ const open=(+tb.cap||0)-(counts().get(tb.id)||0); label+=`  →  ${tName(tb)}, ${open>0?open+' open':open===0?'full':'over'}`; } }
+      else if(t&&t.dataset.drop==='tray') label+='  →  Unseat';
+      D.ghost.textContent=label;
+    }
+  }
+  function autoScroll(){
+    if(!D.active) return;
+    const narrow=innerWidth<1000;
+    const bottomEdge = narrow ? $('#tray').getBoundingClientRect().top : innerHeight;
+    let dy=0;
+    if(D.y<90) dy=-Math.ceil((90-D.y)/6);
+    else if(D.y>bottomEdge-70 && D.y<bottomEdge+10) dy=Math.ceil((D.y-(bottomEdge-70))/6);
+    let dx=0; const sc=$('.map-scroll');
+    if(S.mode==='map' && sc.scrollWidth>sc.clientWidth){ const r=sc.getBoundingClientRect(); if(D.y>r.top && D.y<r.bottom){ if(D.x<r.left+50) dx=-8; else if(D.x>r.right-50) dx=8; } }
+    if(dx) sc.scrollLeft+=dx;
+    if(dy) scrollBy(0,dy);
+    if(dx||dy) moveDrag(D.x,D.y);
+    D.raf=requestAnimationFrame(autoScroll);
+  }
+  function endDrag(cancel){
+    if(!D.active) return;
+    cancelAnimationFrame(D.raf);
+    const t=D.over, moved=Math.hypot(D.x-D.sx,D.y-D.sy)>12, ids=D.ids;
+    D.over&&D.over.classList.remove('drop-hover');
+    D.ghost.remove(); document.body.classList.remove('dragging');
+    document.querySelectorAll('.lifted').forEach(n=>n.classList.remove('lifted'));
+    D.active=false; suppressClick=true; setTimeout(()=>suppressClick=false,350);
+    if(cancel||!moved||!t) return;
+    if(t.dataset.drop==='table') seatIds(ids, t.dataset.id);
+    else if(t.dataset.drop==='tray') unseatIds(ids);
+  }
+  // mouse / pen
+  let pend=null;
+  document.addEventListener('pointerdown', e=>{
+    if(e.pointerType==='touch' || e.button!==0) return;
+    const el=e.target.closest('[data-drag]'); if(!el || e.target.closest('.icon,.linkbtn')) return;
+    pend={el,x:e.clientX,y:e.clientY};
+  });
+  document.addEventListener('pointermove', e=>{
+    if(e.pointerType==='touch') return;
+    if(D.active){ moveDrag(e.clientX,e.clientY); return; }
+    if(pend && Math.hypot(e.clientX-pend.x,e.clientY-pend.y)>5){ e.preventDefault(); const p=pend; pend=null; startDrag(p.el,p.x,p.y); moveDrag(e.clientX,e.clientY); }
+  });
+  document.addEventListener('pointerup', e=>{ if(e.pointerType==='touch') return; pend=null; if(D.active) endDrag(false); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && D.active) endDrag(true); });
+  // touch: press and hold, then drag
+  let tp=null;
+  document.addEventListener('touchstart', e=>{
+    if(e.touches.length>1){ if(tp){ clearTimeout(tp.timer); tp=null; } return; }
+    const el=e.target.closest('[data-drag]'); if(!el || e.target.closest('.icon,.linkbtn')) return;
+    const t=e.touches[0];
+    tp={el,x:t.clientX,y:t.clientY,timer:setTimeout(()=>{ if(tp){ startDrag(tp.el,tp.x,tp.y); } },230)};
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{
+    const t=e.touches[0];
+    if(D.active){ e.preventDefault(); moveDrag(t.clientX,t.clientY); return; }
+    if(tp && Math.hypot(t.clientX-tp.x,t.clientY-tp.y)>8){ clearTimeout(tp.timer); tp=null; }
+  }, {passive:false});
+  function touchEnd(e){ if(tp){ clearTimeout(tp.timer); tp=null; } if(D.active){ if(e.cancelable) e.preventDefault(); endDrag(e.type==='touchcancel'); } }
+  document.addEventListener('touchend', touchEnd, {passive:false});
+  document.addEventListener('touchcancel', touchEnd, {passive:false});
+  document.addEventListener('contextmenu', e=>{ if(e.target.closest('[data-drag]')) e.preventDefault(); });
+
+  /* ---------- room map interaction ---------- */
+  const svg=$('#map'), layer=$('#tablesLayer');
+  let tdrag=null, tSuppress=false;
+  function svgPt(e){ const p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+  layer.addEventListener('pointerdown', e=>{
+    if(!S.arrange) return; const g=e.target.closest('.tbl'); if(!g) return;
+    const t=S.tables.get(g.dataset.id); if(!t) return;
+    e.preventDefault(); const p=svgPt(e);
+    tdrag={id:t.id,g,dx:p.x-t.x,dy:p.y-t.y,moved:false,x:t.x,y:t.y,pid:e.pointerId};
+    g.setPointerCapture(e.pointerId);
+  });
+  layer.addEventListener('pointermove', e=>{
+    if(!tdrag || e.pointerId!==tdrag.pid) return; const p=svgPt(e);
+    const x=Math.round(Math.min(1070,Math.max(40,p.x-tdrag.dx))), y=Math.round(Math.min(535,Math.max(70,p.y-tdrag.dy)));
+    if(Math.abs(x-tdrag.x)+Math.abs(y-tdrag.y)>3) tdrag.moved=true;
+    tdrag.nx=x; tdrag.ny=y; tdrag.g.setAttribute('transform',`translate(${x} ${y})`);
+  });
+  function endTdrag(e){ if(!tdrag||(e&&e.pointerId!==tdrag.pid)) return; const d=tdrag; tdrag=null; if(d.moved){ tSuppress=true; updTable(d.id,{x:d.nx,y:d.ny}); renderMap(); } }
+  layer.addEventListener('pointerup', endTdrag); layer.addEventListener('pointercancel', endTdrag);
+  layer.addEventListener('click', e=>{ const g=e.target.closest('.tbl'); if(!g) return; if(tSuppress){ tSuppress=false; return; } tableTap(g.dataset.id); });
+  layer.addEventListener('keydown', e=>{ const g=e.target.closest('.tbl'); if(g&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); tableTap(g.dataset.id); } });
+  $('#arrange').onclick=()=>{ S.arrange=!S.arrange; $('#arrange').setAttribute('aria-pressed',S.arrange); $('#arrange').textContent=S.arrange?'Done':'Move tables'; renderAll(); };
+  $('#addTable').onclick=()=>{
+    if(!S.db) return;
+    const nums=[...S.tables.values()].map(t=>parseInt(t.label,10)).filter(n=>!isNaN(n));
+    const next=(nums.length?Math.max(...nums):0)+1;
+    const ref=T().doc(); const data={label:String(next),cap:10,x:430,y:320,shape:'round',extra:true,order:next};
+    S.tables.set(ref.id,{id:ref.id,...data});
+    write(()=>ref.set(data)).catch(()=>{});
+    renderAll();
+    toast(S.mode==='map' ? `Added Table ${next}. Tap Move tables to drag it into place.` : `Added Table ${next} with 10 seats. Place it on the Room view.`);
+  };
+
+  /* ---------- table dialog ---------- */
+  let curTable=null, tCap=10, delArmed=false;
+  function openTable(id){ const t=S.tables.get(id); if(!t) return; curTable=id; tCap=+t.cap||0; $('#tLabel').value=t.label; delArmed=false; fillTableDlg(); $('#tableDlg').showModal(); }
+  function fillTableDlg(){
+    const t=S.tables.get(curTable); if(!t){ $('#tableDlg').close(); return; }
+    const people=seatedAt(curTable);
+    $('#tTitle').textContent=tName(t); $('#tCap').textContent=tCap;
+    const open=tCap-people.length;
+    $('#tSummary').textContent = people.length ? `${people.length} seated, ${open>=0?open+' open':'over by '+(-open)}.` : 'Nobody here yet. Drag names onto this table to seat them.';
+    $('#tList').innerHTML=people.map(g=>`<li><span>${esc(g.name)} ${g.party?`<small>${esc(g.party)}</small>`:''}</span><button class="linkbtn" data-id="${esc(g.id)}">Unseat</button></li>`).join('');
+    const del=$('#tDelete'); del.classList.toggle('arm',delArmed);
+    del.textContent = delArmed ? (people.length?`Delete and unseat ${people.length}`:'Tap again to delete') : 'Delete table';
+  }
+  $('#tList').onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; updGuest(b.dataset.id,{table:null}); renderAll(); };
+  $('#tMinus').onclick=()=>{ tCap=Math.max(1,tCap-1); fillTableDlg(); };
+  $('#tPlus').onclick=()=>{ tCap=Math.min(30,tCap+1); fillTableDlg(); };
+  $('#tDone').onclick=()=>{
+    const t=S.tables.get(curTable);
+    if(t){ const label=$('#tLabel').value.trim()||t.label; const patch={};
+      if(label!==t.label) patch.label=label; if(tCap!==+t.cap) patch.cap=tCap;
+      if(Object.keys(patch).length){ updTable(curTable,patch); toast(`Saved ${tName({...t,...patch})}.`); } }
+    $('#tableDlg').close(); renderAll();
+  };
+  $('#tDelete').onclick=()=>{
+    if(!delArmed){ delArmed=true; fillTableDlg(); return; }
+    const id=curTable, t=S.tables.get(id);
+    seatedAt(id).forEach(g=>updGuest(g.id,{table:null}));
+    S.tables.delete(id); write(()=>T().doc(id).delete()).catch(()=>{});
+    $('#tableDlg').close(); renderAll(); toast(`Deleted ${tName(t)}.`);
+  };
+
+  /* ---------- guest dialog ---------- */
+  let curGuest=null, gDelArmed=false;
+  function openGuest(id){
+    curGuest=id||null; gDelArmed=false;
+    const g=id?S.guests.get(id):null;
+    $('#guestTitle').textContent = g ? 'Edit guest' : 'Add guest';
+    $('#gName').value=g?g.name:''; $('#gParty').value=g?g.party||'':''; $('#gRsvp').value=g?g.rsvp||'pending':'pending'; $('#gNote').value=g?g.note||'':'';
+    const c=counts();
+    $('#gTable').innerHTML='<option value="">Unseated</option>'+sortedTables().map(t=>`<option value="${esc(t.id)}">${esc(tName(t))} (${c.get(t.id)||0}/${t.cap})</option>`).join('');
+    $('#gTable').value = g && isSeated(g) ? g.table : '';
+    $('#partyList').innerHTML=[...new Set([...S.guests.values()].map(x=>x.party).filter(Boolean))].sort().map(p=>`<option value="${esc(p)}">`).join('');
+    const del=$('#gDelete'); del.hidden=!g; del.classList.remove('arm'); del.textContent='Delete guest';
+    $('#guestDlg').showModal(); if(!g) setTimeout(()=>$('#gName').focus(),50);
+  }
+  $('#addGuestBtn').onclick=()=>{ if(S.db) openGuest(null); };
+  $('#guestForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const name=$('#gName').value.trim(); if(!name){ $('#gName').focus(); return; }
+    const rsvp=$('#gRsvp').value;
+    const data={ name, party:$('#gParty').value.trim(), rsvp, table: rsvp==='no'?null:($('#gTable').value||null), note:$('#gNote').value.trim() };
+    if(curGuest){ const was=S.guests.get(curGuest); updGuest(curGuest,data); toast(`Saved ${name}.`+(rsvp==='no'&&was&&isSeated(was)?' Unseated since they declined.':'')); }
+    else { const ref=G().doc(); const full={...data,createdAt:Date.now()}; S.guests.set(ref.id,{id:ref.id,...full}); write(()=>ref.set(full)).catch(()=>{}); toast(`Added ${name}.`); }
+    $('#guestDlg').close(); renderAll();
+  });
+  $('#gDelete').onclick=()=>{
+    const del=$('#gDelete');
+    if(!gDelArmed){ gDelArmed=true; del.classList.add('arm'); del.textContent='Tap again to delete'; return; }
+    const id=curGuest, g=S.guests.get(id); S.guests.delete(id); S.sel.delete(id);
+    write(()=>G().doc(id).delete()).catch(()=>{});
+    $('#guestDlg').close(); renderAll(); toast(`Deleted ${g?g.name:'guest'}.`);
+  };
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+
+  /* ---------- import ---------- */
+  let parsed=[];
+  function openImport(){ if(!S.db) return; $('#iText').value=''; $('#iFile').value=''; parsed=[]; updateImport(); $('#importDlg').showModal(); }
+  $('#importBtn').onclick=openImport;
+  function parseDelimited(text,d){
+    const rows=[]; let row=[], f='', q=false;
+    for(let i=0;i<text.length;i++){ const c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+      else if(c==='"') q=true;
+      else if(c===d){ row.push(f); f=''; }
+      else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; }
+      else f+=c;
+    }
+    row.push(f); rows.push(row); return rows;
+  }
+  const normRsvp = v => { v=String(v||'').trim().toLowerCase(); if(!v) return null;
+    if(/^(y|yes|attending|accepted|accept|going|coming|confirmed|will attend)/.test(v)) return 'yes';
+    if(/^(n|no|declined|decline|regrets|not attending|not going|can'?t|cannot)/.test(v)) return 'no';
+    return 'pending'; };
+  function parseImport(text){
+    text=String(text||'').replace(/^\uFEFF/,'').trim(); if(!text) return {rows:[],cols:[]};
+    const first=text.split(/\r?\n/)[0];
+    const d = first.includes('\t') ? '\t' : (text.includes(',') ? ',' : null);
+    let grid = d ? parseDelimited(text,d) : text.split(/\r?\n/).map(l=>[l]);
+    grid = grid.map(r=>r.map(c=>c.trim())).filter(r=>r.some(Boolean));
+    if(!grid.length) return {rows:[],cols:[]};
+    const head=grid[0].map(h=>h.toLowerCase());
+    const find=(re,skip=[])=>head.findIndex((h,i)=>!skip.includes(i)&&re.test(h));
+    const ix={};
+    ix.rsvp=find(/rsvp|status|attend|response|reply|coming/);
+    ix.first=find(/first/); ix.last=find(/last|surname/);
+    ix.name=find(/^(full ?)?name$|guest ?name|^guest$|^name\b/,[ix.first,ix.last]);
+    ix.party=find(/household|family|group|^party$|party ?name|invit|address(ed)? to/,[ix.rsvp]);
+    ix.table=find(/^table/); ix.note=find(/note|comment|dietary/);
+    const hasHeader = ix.name>=0 || ix.first>=0;
+    const cols=[], rows=[];
+    if(hasHeader){
+      cols.push(ix.name>=0?'name':'first and last name'); if(ix.party>=0) cols.push('party'); if(ix.rsvp>=0) cols.push('RSVP'); if(ix.table>=0) cols.push('table'); if(ix.note>=0) cols.push('note');
+      for(const r of grid.slice(1)){
+        const name = ix.name>=0 ? r[ix.name] : [r[ix.first],ix.last>=0?r[ix.last]:''].filter(Boolean).join(' ');
+        if(!name) continue;
+        rows.push({ name, party:ix.party>=0?r[ix.party]||'':'', rsvp:ix.rsvp>=0?normRsvp(r[ix.rsvp]):null, table:ix.table>=0?r[ix.table]||'':'', note:ix.note>=0?r[ix.note]||'':'' });
+      }
+    } else {
+      cols.push('name'); if(grid.some(r=>r[1])) cols.push('party'); if(grid.some(r=>r[2])) cols.push('RSVP');
+      for(const r of grid){ const name=(r[0]||'').replace(/^[-*•\d.)\s]+/,'').trim(); if(!name) continue; rows.push({name,party:r[1]||'',rsvp:normRsvp(r[2]),table:'',note:''}); }
+    }
+    return {rows,cols};
+  }
+  function updateImport(){
+    const {rows,cols}=parseImport($('#iText').value);
+    const skip=$('#iSkip').checked;
+    const have=new Set([...S.guests.values()].map(g=>g.name.trim().toLowerCase()));
+    const seen=new Set(); let dupes=0;
+    parsed=rows.filter(r=>{ const k=r.name.toLowerCase(); if(skip&&(have.has(k)||seen.has(k))){ dupes++; return false; } seen.add(k); return true; });
+    $('#iSummary').textContent = rows.length ? `Found ${rows.length} name${rows.length>1?'s':''} (reading ${cols.join(', ')}).`+(dupes?` Skipping ${dupes} already on the list.`:'') : 'Nothing to import yet.';
+    const pv=$('#iPreview'); pv.hidden=!parsed.length;
+    pv.innerHTML = parsed.length ? `<table><tr><th>Name</th><th>Party</th><th>RSVP</th></tr>${parsed.slice(0,6).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.party)}</td><td>${rsvpLabel(r.rsvp||$('#iRsvp').value)}</td></tr>`).join('')}${parsed.length>6?`<tr><td colspan="3">and ${parsed.length-6} more</td></tr>`:''}</table>` : '';
+    const go=$('#iGo'); go.disabled=!parsed.length; go.textContent = parsed.length ? `Import ${parsed.length} guest${parsed.length>1?'s':''}` : 'Import';
+  }
+  $('#iText').addEventListener('input', updateImport);
+  $('#iSkip').onchange=updateImport; $('#iRsvp').onchange=updateImport;
+  $('#iFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ $('#iText').value=rd.result; updateImport(); }; rd.onerror=()=>toast('That file couldn’t be read. Try saving it as CSV.',true); rd.readAsText(f); };
+  $('#iGo').onclick=async()=>{
+    const rows=parsed.slice(); if(!rows.length) return;
+    const go=$('#iGo'); go.disabled=true;
+    const byLabel=new Map(); for(const t of S.tables.values()){ byLabel.set(String(t.label).toLowerCase(),t.id); byLabel.set(tName(t).toLowerCase(),t.id); }
+    const def=$('#iRsvp').value; let done=0, failed=0; const now=Date.now();
+    await Promise.all(rows.map((r,i)=>{
+      const rsvp=r.rsvp||def, table=rsvp==='no'?null:(byLabel.get(String(r.table).toLowerCase())||null);
+      const data={ name:r.name, party:r.party, rsvp, table, note:r.note, createdAt:now+i };
+      const ref=G().doc(); S.guests.set(ref.id,{id:ref.id,...data});
+      return enqueue(()=>ref.set(data)).then(()=>{ done++; go.textContent=`Importing ${done} of ${rows.length}…`; }, ()=>{ failed++; S.guests.delete(ref.id); });
+    }));
+    $('#importDlg').close(); renderAll();
+    toast(failed ? `Imported ${done}. ${failed} didn’t save, so import again to add the rest.` : `Imported ${done} guest${done>1?'s':''}.`, !!failed);
+  };
+
+  /* ---------- download ---------- */
+  $('#dlBtn').onclick=async()=>{
+    const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+    const lines=[['Name','Party','RSVP','Table','Note'].join(',')].concat([...S.guests.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(g=>[g.name,g.party,rsvpLabel(g.rsvp),isSeated(g)?tName(S.tables.get(g.table)):'',g.note].map(q).join(',')));
+    const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+    const a=document.createElement('a'); a.href=url; a.download='seating-chart.csv'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+
+  /* ---------- default ballroom layout ---------- */
+  const LAYOUT=[["head","Sweetheart",2,405,112,0,"head",false],
+    ["t01","1",12,77,125,1],["t02","2",10,76,221,2],["t03","3",10,120,327,3],["t04","4",12,74,463,4],
+    ["t05","5",10,191,125,5],["t06","6",12,287,125,6],["t07","7",12,532,125,7],["t08","8",10,639,120,8],
+    ["t09","9",12,209,241,9],["t10","10",12,610,226,10],["t11","11",12,222,482,11],["t12","12",12,614,487,12],
+    ["t13","13",12,744,119,13],["t14","14",10,857,118,14],["t15","15",12,956,119,15],["t16","16",10,753,232,16],
+    ["t17","17",12,863,233,17],["t18","18",10,978,235,18],["t19","19",10,985,435,19],
+    ["t20","20",10,765,420,20,"round",true],["t21","21",10,870,420,21,"round",true]];
+  async function setupRoom(){
+    const b=S.db.batch();
+    LAYOUT.forEach(([id,label,cap,x,y,order,shape,extra])=>b.set(T().doc(id),{label,cap,x,y,order,shape:shape||'round',extra:!!extra}));
+    try{ await b.commit(); toast('Ballroom layout added.'); } catch(e){ toast('Couldn’t add the layout. '+(e.message||''),true); }
+  }
+
+  /* ---------- boot ---------- */
+  let unsubs=[];
+  function init(){
+    renderAll();
+    if(!window.firebase || String(FIREBASE_CONFIG.apiKey).startsWith('PASTE')){
+      notice('This page isn’t connected yet. Paste your Firebase settings into FIREBASE_CONFIG at the top of the script in index.html.');
+      $('#list').innerHTML='<div class="empty"><p>The guest list loads once the page is connected.</p></div>';
+      ['#addGuestBtn','#importBtn','#addTable','#arrange'].forEach(s=>$(s).disabled=true);
+      return;
+    }
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const auth=firebase.auth();
+    const provider=new firebase.auth.GoogleAuthProvider();
+    $('#signIn').onclick=async()=>{
+      try{ await auth.signInWithPopup(provider); }
+      catch(e){ if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')) auth.signInWithRedirect(provider); else $('#gateMsg').textContent='Sign-in didn’t finish. '+(e.message||'Try again.'); }
+    };
+    $('#signOut').onclick=()=>auth.signOut();
+    auth.onAuthStateChanged(user=>{
+      unsubs.forEach(u=>u()); unsubs=[];
+      if(!user){ S.db=null; document.body.classList.add('locked'); $('#gate').hidden=false; $('#signOut').hidden=true; notice(''); return; }
+      document.body.classList.remove('locked'); $('#gate').hidden=true; $('#signOut').hidden=false;
+      $('#signOut').textContent='Sign out ('+(user.email||'')+')';
+      S.db=firebase.firestore(); S.ready={t:false,g:false}; S.tables=new Map(); S.guests=new Map();
+      ['#addGuestBtn','#importBtn','#addTable','#arrange'].forEach(s=>$(s).disabled=false);
+      const onErr=e=>{
+        if(e&&e.code==='permission-denied'){ notice(`${user.email} doesn’t have access to this chart. Sign out and use an account that’s on the list.`); }
+        else notice('The chart lost its connection. Reload the page to reconnect.');
+      };
+      unsubs.push(T().onSnapshot(snap=>{ const m=new Map(); snap.docs.forEach(d=>m.set(d.id,{id:d.id,...d.data()})); S.tables=m; S.ready.t=true; if(!D.active) renderAll(); }, onErr));
+      unsubs.push(G().onSnapshot(snap=>{ const m=new Map(); snap.docs.forEach(d=>{ const x=d.data(); m.set(d.id,{id:d.id,...x,name:String(x.name||'')}); }); S.guests=m; S.ready.g=true;
+        for(const id of [...S.sel]) if(!m.has(id)) S.sel.delete(id); if(!D.active) renderAll(); }, onErr));
+      $('#dlBtn').hidden=false;
+      renderAll();
+    });
+  }
+  init();
+})();
+</script>
+</body>
+</html>
